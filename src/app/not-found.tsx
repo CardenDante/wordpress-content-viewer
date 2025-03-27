@@ -6,15 +6,14 @@ export default function NotFound() {
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 text-center">
       <div className="w-full max-w-md mx-auto">
-        <div className="relative w-full max-w-[250px] mx-auto mb-6 aspect-square">
-          <Image 
-            src="/images/not-found.png" 
-            alt="Guard Dog" 
-            fill
-            className="object-contain"
-            priority
-          />
-        </div>
+        <Image 
+          src="/images/not-found.png" 
+          alt="Guard Dog" 
+          width={300} 
+          height={300}
+          className="mx-auto mb-6 w-auto h-auto max-w-full"
+          priority
+        />
         
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-[#A86212]">Woof! Where are you going?</h1>
         
