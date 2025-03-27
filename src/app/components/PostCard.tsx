@@ -39,7 +39,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
         
         <div className="p-4">
           <h3 
-            className="text-lg font-bold mb-2 text-[#A86212]"
+            className="text-lg font-bold mb-2 text-gray-800"
             dangerouslySetInnerHTML={{ __html: post.title.rendered }}
           />
           

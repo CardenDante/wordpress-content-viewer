@@ -202,3 +202,38 @@ export function getFeaturedImageUrl(post: WordPressPost): string | null {
   }
   return null;
 }
+
+// Fetch posts by category slug (instead of ID)
+export async function getPostsByCategorySlug(slug: string, page = 1) {
+  try {
+    // First get the category to find its ID
+    const category = await getCategoryBySlug(slug);
+    if (!category) {
+      return { posts: [] as WordPressPost[], totalPages: 0 };
+    }
+    
+    // Then fetch posts by category ID
+    return await getPostsByCategory(category.id, page);
+  } catch (error) {
+    console.error('Error fetching posts by category slug:', error);
+    return { posts: [] as WordPressPost[], totalPages: 0 };
+  }
+}
+
+// Fetch all posts for "Our Team" (useful for team page)
+export async function getTeamMembers(page = 1, perPage = 12) {
+  // Use the "Our Team" category ID from your WordPress
+  return await getPostsByCategory(26, page);
+}
+
+// Fetch all posts for "Projects" (useful for projects page)
+export async function getProjects(page = 1, perPage = 9) {
+  // Use the "Projects" category ID from your WordPress
+  return await getPostsByCategory(6, page);
+}
+
+// Fetch all posts for "Articles" (useful for blog/articles page)
+export async function getArticles(page = 1, perPage = 9) {
+  // Use the "Articles" category ID from your WordPress
+  return await getPostsByCategory(5, page);
+}

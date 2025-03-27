@@ -1,11 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [sticky, setSticky] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Handle navbar transparency on scroll
   useEffect(() => {
@@ -19,44 +19,66 @@ const Navbar = () => {
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (isOpen && !target.closest('nav')) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, []);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${sticky ? 'bg-white shadow-md' : 'bg-transparent'}`}>
+    <header 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        sticky ? 'bg-white shadow-md py-2' : 'bg-[#14181F] py-4'
+      }`}
+      ref={menuRef}
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between h-20">
+        <nav className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold text-[#A86212] mr-2">CRDD</span>
-            {sticky && <span className="hidden md:inline text-sm text-gray-600">Centre for Research in Drylands Development</span>}
+            {/* Logo or image */}
+            <div className={`w-10 h-10 rounded-full mr-2 flex items-center justify-center ${
+              sticky ? 'bg-[#A86212] text-white' : 'bg-white text-[#A86212]'
+            }`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <span className={`text-xl font-bold ${sticky ? 'text-[#A86212]' : 'text-white'}`}>
+              CRDD
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-gray-700 hover:text-[#A86212] font-medium transition-colors">
-              Home
-            </Link>
-            <Link href="/about" className="text-gray-700 hover:text-[#A86212] font-medium transition-colors">
-              About Us
-            </Link>
-            <Link href="/approach" className="text-gray-700 hover:text-[#A86212] font-medium transition-colors">
-              Our Approach
-            </Link>
-            <Link href="/team" className="text-gray-700 hover:text-[#A86212] font-medium transition-colors">
-              Our Team
-            </Link>
-            <Link href="/blog" className="text-gray-700 hover:text-[#A86212] font-medium transition-colors">
-              Blog
-            </Link>
-            <Link href="/contact" className="bg-[#A86212] text-white px-4 py-2 rounded hover:bg-[#8A5210] transition-colors">
+          <div className="hidden md:flex items-center space-x-6">
+            {[
+              { href: '/', label: 'Home' },
+              { href: '/about-us', label: 'About Us' },
+              { href: '/projects', label: 'Projects' },
+              { href: '/our-team', label: 'Our Team' },
+              { href: '/blog', label: 'Blog' }
+            ].map((link) => (
+              <Link 
+                key={link.href} 
+                href={link.href}
+                className={`font-medium ${
+                  sticky ? 'text-gray-700 hover:text-[#A86212]' : 'text-white hover:text-gray-200'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link 
+              href="/contact-us" 
+              className={`px-4 py-2 rounded-md font-medium ${
+                sticky 
+                  ? 'bg-[#A86212] text-white hover:bg-[#8A5210]' 
+                  : 'bg-white text-[#A86212] hover:bg-gray-100'
+              }`}
+            >
               Contact Us
             </Link>
           </div>
@@ -64,7 +86,9 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-gray-700 focus:outline-none"
+            className={`md:hidden p-2 rounded-md focus:outline-none ${
+              sticky ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'
+            }`}
             aria-label="Toggle menu"
           >
             {!isOpen ? (
@@ -80,27 +104,38 @@ const Navbar = () => {
         </nav>
       </div>
 
-      {/* Mobile Navigation */}
-      <div className={`md:hidden transition-all duration-300 overflow-hidden ${isOpen ? 'max-h-screen bg-white' : 'max-h-0'}`}>
-        <div className="container mx-auto px-4 py-4 space-y-3">
-          <Link href="/" className="block py-2 text-gray-700 hover:text-[#A86212]" onClick={() => setIsOpen(false)}>
-            Home
-          </Link>
-          <Link href="/about" className="block py-2 text-gray-700 hover:text-[#A86212]" onClick={() => setIsOpen(false)}>
-            About Us
-          </Link>
-          <Link href="/approach" className="block py-2 text-gray-700 hover:text-[#A86212]" onClick={() => setIsOpen(false)}>
-            Our Approach
-          </Link>
-          <Link href="/team" className="block py-2 text-gray-700 hover:text-[#A86212]" onClick={() => setIsOpen(false)}>
-            Our Team
-          </Link>
-          <Link href="/blog" className="block py-2 text-gray-700 hover:text-[#A86212]" onClick={() => setIsOpen(false)}>
-            Blog
-          </Link>
-          <Link href="/contact" className="block w-full bg-[#A86212] text-white px-4 py-2 rounded text-center hover:bg-[#8A5210]" onClick={() => setIsOpen(false)}>
-            Contact Us
-          </Link>
+      {/* Mobile Navigation Dropdown */}
+      <div 
+        className={`md:hidden transition-all duration-300 overflow-hidden shadow-lg ${
+          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="container mx-auto px-4 py-3 bg-white">
+          <div className="flex flex-col space-y-2">
+            {[
+              { href: '/', label: 'Home' },
+              { href: '/about-us', label: 'About Us' },
+              { href: '/projects', label: 'Projects' },
+              { href: '/our-team', label: 'Our Team' },
+              { href: '/blog', label: 'Blog' }
+            ].map((link) => (
+              <Link 
+                key={link.href} 
+                href={link.href}
+                className="py-2 px-3 text-gray-700 hover:bg-gray-100 rounded-md"
+                onClick={() => setIsOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link 
+              href="/contact-us" 
+              className="py-2 px-3 mt-2 bg-[#A86212] text-white rounded-md text-center font-medium hover:bg-[#8A5210]"
+              onClick={() => setIsOpen(false)}
+            >
+              Contact Us
+            </Link>
+          </div>
         </div>
       </div>
     </header>
