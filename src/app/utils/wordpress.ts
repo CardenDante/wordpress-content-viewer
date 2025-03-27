@@ -1,5 +1,5 @@
-// Replace with your WordPress site URL
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://your-wordpress-site.com/wp-json/wp/v2';
+// Replace with your actual WordPress site URL
+const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://cms.crdd-kenya.org/wp-json/wp/v2';
 
 // Types
 export interface WordPressPost {
@@ -40,9 +40,14 @@ export interface WordPressCategory {
 function buildQueryParams(params: Record<string, string> = {}): string {
   const searchParams = new URLSearchParams();
   
-  // Add default params
-  searchParams.append('_embed', 'wp:featuredmedia,wp:term');
-  searchParams.append('per_page', '10');
+  // Add default params if not overridden
+  if (!params._embed) {
+    searchParams.append('_embed', 'wp:featuredmedia,wp:term');
+  }
+  
+  if (!params.per_page) {
+    searchParams.append('per_page', '10');
+  }
   
   // Add custom params
   Object.entries(params).forEach(([key, value]) => {
@@ -52,23 +57,42 @@ function buildQueryParams(params: Record<string, string> = {}): string {
   return searchParams.toString();
 }
 
+// Function to clean HTML content
+export function cleanHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .trim();
+}
+
+// Log API responses for debugging
+async function debugFetch(url: string, options = {}) {
+  console.log('Fetching from:', url);
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    console.log(`API response from ${url}:`, 
+      Array.isArray(data) ? `Retrieved ${data.length} items` : 'Retrieved data');
+    return { response, data };
+  } catch (error) {
+    console.error('Error fetching from WordPress:', error);
+    throw error;
+  }
+}
+
 // Fetch posts with category and featured image data
 export async function getPosts(params: Record<string, string> = {}) {
   try {
     const queryParams = buildQueryParams(params);
     const apiUrl = `${WORDPRESS_API_URL}/posts?${queryParams}`;
     
-    console.log('Fetching posts from:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      next: { revalidate: 3600 }, // Revalidate every hour
+    const { response, data } = await debugFetch(apiUrl, {
+      cache: 'no-store' // Disable caching to ensure fresh data
     });
     
-    if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
     const posts = Array.isArray(data) ? data : [];
     const totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1');
     
@@ -78,41 +102,90 @@ export async function getPosts(params: Record<string, string> = {}) {
     };
   } catch (error) {
     console.error('Error fetching posts:', error);
+    // Return empty array but don't throw so we can show fallback UI
     return { posts: [] as WordPressPost[], totalPages: 0 };
   }
 }
 
-// Fetch posts by category
-export async function getPostsByCategory(categoryId: number, page = 1) {
+// Get all categories
+export async function getCategories() {
+  try {
+    const apiUrl = `${WORDPRESS_API_URL}/categories?per_page=100`;
+    
+    const { data } = await debugFetch(apiUrl, {
+      cache: 'no-store'
+    });
+    
+    return Array.isArray(data) ? data as WordPressCategory[] : [];
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [] as WordPressCategory[];
+  }
+}
+
+// Find category ID by slug
+export async function getCategoryIdBySlug(slug: string): Promise<number | null> {
+  try {
+    const categories = await getCategories();
+    const category = categories.find(cat => cat.slug === slug);
+    return category ? category.id : null;
+  } catch (error) {
+    console.error(`Error finding category "${slug}":`, error);
+    return null;
+  }
+}
+
+// Get specific category by slug
+export async function getCategoryBySlug(slug: string): Promise<WordPressCategory | null> {
+  try {
+    const apiUrl = `${WORDPRESS_API_URL}/categories?slug=${slug}`;
+    
+    const { data } = await debugFetch(apiUrl, {
+      cache: 'no-store'
+    });
+    
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0] as WordPressCategory;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching category by slug ${slug}:`, error);
+    return null;
+  }
+}
+
+// Fetch posts by category ID
+export async function getPostsByCategory(categoryId: number, page = 1, perPage = 9) {
   try {
     const params: Record<string, string> = {
       categories: categoryId.toString(),
-      page: page.toString()
+      page: page.toString(),
+      per_page: perPage.toString()
     };
     
-    const queryParams = buildQueryParams(params);
-    const apiUrl = `${WORDPRESS_API_URL}/posts?${queryParams}`;
-    
-    console.log('Fetching category posts from:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      next: { revalidate: 3600 }, // Revalidate every hour
-    });
-    
-    if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    return await getPosts(params);
+  } catch (error) {
+    console.error(`Error fetching posts for category ID ${categoryId}:`, error);
+    return { posts: [] as WordPressPost[], totalPages: 0 };
+  }
+}
+
+// Fetch posts by category slug
+export async function getPostsByCategorySlug(slug: string, page = 1, perPage = 9) {
+  try {
+    // First get the category to find its ID
+    const category = await getCategoryBySlug(slug);
+    if (!category) {
+      console.error(`Category with slug "${slug}" not found`);
+      return { posts: [] as WordPressPost[], totalPages: 0 };
     }
     
-    const data = await response.json();
-    const posts = Array.isArray(data) ? data : [];
-    const totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1');
+    console.log(`Found category ID ${category.id} for slug "${slug}"`);
     
-    return {
-      posts: posts as WordPressPost[],
-      totalPages
-    };
+    // Then fetch posts by category ID
+    return await getPostsByCategory(category.id, page, perPage);
   } catch (error) {
-    console.error('Error fetching posts by category:', error);
+    console.error(`Error fetching posts for category "${slug}":`, error);
     return { posts: [] as WordPressPost[], totalPages: 0 };
   }
 }
@@ -122,66 +195,16 @@ export async function getPostBySlug(slug: string) {
   try {
     const apiUrl = `${WORDPRESS_API_URL}/posts?slug=${slug}&_embed=wp:featuredmedia,wp:term`;
     
-    console.log('Fetching post by slug from:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      next: { revalidate: 3600 }, // Revalidate every hour
+    const { data } = await debugFetch(apiUrl, {
+      cache: 'no-store'
     });
     
-    if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0] as WordPressPost;
     }
-    
-    const posts = await response.json();
-    return Array.isArray(posts) && posts.length > 0 ? posts[0] : null;
-  } catch (error) {
-    console.error('Error fetching post by slug:', error);
     return null;
-  }
-}
-
-// Fetch all categories
-export async function getCategories() {
-  try {
-    const apiUrl = `${WORDPRESS_API_URL}/categories?per_page=100`;
-    
-    console.log('Fetching categories from:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      next: { revalidate: 3600 }, // Revalidate every hour
-    });
-    
-    if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Error fetching categories:', error);
-    return [];
-  }
-}
-
-// Fetch category by slug
-export async function getCategoryBySlug(slug: string) {
-  try {
-    const apiUrl = `${WORDPRESS_API_URL}/categories?slug=${slug}`;
-    
-    console.log('Fetching category by slug from:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      next: { revalidate: 3600 }, // Revalidate every hour
-    });
-    
-    if (!response.ok) {
-      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const categories = await response.json();
-    return Array.isArray(categories) && categories.length > 0 ? categories[0] : null;
-  } catch (error) {
-    console.error('Error fetching category by slug:', error);
+    console.error(`Error fetching post by slug ${slug}:`, error);
     return null;
   }
 }
@@ -203,37 +226,38 @@ export function getFeaturedImageUrl(post: WordPressPost): string | null {
   return null;
 }
 
-// Fetch posts by category slug (instead of ID)
-export async function getPostsByCategorySlug(slug: string, page = 1) {
+// Specific content type fetchers - using the correct slugs
+export async function getTeamMembers(perPage = 4, orderBy = 'date', order = 'desc') {
   try {
-    // First get the category to find its ID
-    const category = await getCategoryBySlug(slug);
-    if (!category) {
+    // Get category ID for 'our-team' 
+    const categoryId = await getCategoryIdBySlug('our-team');
+    if (!categoryId) {
+      console.error('Team category not found');
       return { posts: [] as WordPressPost[], totalPages: 0 };
     }
     
-    // Then fetch posts by category ID
-    return await getPostsByCategory(category.id, page);
+    // Build params with ordering
+    const params: Record<string, string> = {
+      categories: categoryId.toString(),
+      per_page: perPage.toString(),
+      orderby: orderBy,
+      order: order
+    };
+    
+    // Fetch posts with these parameters
+    return await getPosts(params);
   } catch (error) {
-    console.error('Error fetching posts by category slug:', error);
+    console.error('Error fetching team members:', error);
     return { posts: [] as WordPressPost[], totalPages: 0 };
   }
 }
 
-// Fetch all posts for "Our Team" (useful for team page)
-export async function getTeamMembers(page = 1, perPage = 12) {
-  // Use the "Our Team" category ID from your WordPress
-  return await getPostsByCategory(26, page);
+export async function getProjects(perPage = 3) {
+  // You may need to update this with the correct projects slug
+  return await getPostsByCategorySlug('projects', 1, perPage);
 }
 
-// Fetch all posts for "Projects" (useful for projects page)
-export async function getProjects(page = 1, perPage = 9) {
-  // Use the "Projects" category ID from your WordPress
-  return await getPostsByCategory(6, page);
-}
-
-// Fetch all posts for "Articles" (useful for blog/articles page)
-export async function getArticles(page = 1, perPage = 9) {
-  // Use the "Articles" category ID from your WordPress
-  return await getPostsByCategory(5, page);
+export async function getArticles(perPage = 3) {
+  // You may need to update this with the correct articles slug
+  return await getPostsByCategorySlug('articles', 1, perPage);
 }

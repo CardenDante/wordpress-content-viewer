@@ -2,6 +2,8 @@ import { getPostBySlug, getFeaturedImageUrl, getCategoryFromPost } from '@/app/u
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ResourcesSidebar from '@/app/components/ResourcesSidebar';
+import { Suspense } from 'react';
+import { SidebarSkeleton } from '@/app/components/ui/LoadingStates';
 
 interface PostParams {
   params: {
@@ -34,7 +36,9 @@ export default async function PostDetail({ params }: PostParams) {
           <span className="mx-2">/</span>
           <Link href="/blog" className="text-gray-600 hover:text-[#A86212]">Blog</Link>
           <span className="mx-2">/</span>
-          <span className="text-[#A86212]">{post.title.rendered}</span>
+          <span className="text-[#A86212] truncate max-w-[250px]" title={post.title.rendered}>
+            {post.title.rendered.replace(/<[^>]*>/g, '')}
+          </span>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -43,11 +47,14 @@ export default async function PostDetail({ params }: PostParams) {
             <article className="bg-white rounded-lg shadow-md overflow-hidden">
               {featuredImageUrl && (
                 <div className="relative h-64 md:h-96 w-full">
-                  <img 
-                    src={featuredImageUrl} 
-                    alt={post.title.rendered} 
-                    className="h-full w-full object-cover"
-                  />
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ 
+                      backgroundImage: `url(${featuredImageUrl})`,
+                      backgroundPosition: 'center',
+                      backgroundSize: 'cover'
+                    }}
+                  ></div>
                 </div>
               )}
               
@@ -74,8 +81,9 @@ export default async function PostDetail({ params }: PostParams) {
           
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            
-            <ResourcesSidebar />
+            <Suspense fallback={<SidebarSkeleton />}>
+              <ResourcesSidebar />
+            </Suspense>
           </div>
         </div>
       </div>

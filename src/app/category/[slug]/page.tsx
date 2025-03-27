@@ -1,7 +1,8 @@
-import { getCategoryBySlug, getPostsByCategory } from '@/app/utils/wordpress';
+import { getCategoryBySlug, getPostsByCategorySlug } from '@/app/utils/wordpress';
 import PostCard from '@/app/components/PostCard';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 interface CategoryPageProps {
   params: {
@@ -20,10 +21,11 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     notFound();
   }
   
-  const { posts, totalPages } = await getPostsByCategory(category.id, page);
+  // Use the getPostsByCategorySlug function with slug rather than ID
+  const { posts, totalPages } = await getPostsByCategorySlug(params.slug, page);
 
   return (
-    <div>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="mb-6 flex items-center">
         <Link href="/" className="text-[#A86212] hover:underline mr-2">
           Home

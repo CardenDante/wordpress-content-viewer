@@ -18,37 +18,54 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
   });
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:shadow-lg hover:-translate-y-1">
-      <Link href={`/post/${post.slug}`}>
-        <div className="relative h-48 w-full">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col">
+      <Link href={`/post/${post.slug}`} className="block flex-1 flex flex-col">
+        <div className="relative h-48 w-full overflow-hidden">
           {featuredImageUrl ? (
-            <img 
-              src={featuredImageUrl} 
-              alt={post.title.rendered} 
-              className="h-full w-full object-cover"
-            />
+            <div
+              className="absolute inset-0 bg-cover bg-center transform transition-transform duration-700 hover:scale-105"
+              style={{ 
+                backgroundImage: `url(${featuredImageUrl})`,
+                backgroundPosition: 'center',
+                backgroundSize: 'cover'
+              }}
+            ></div>
           ) : (
-            <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+            <div className="h-full w-full bg-gradient-to-r from-gray-200 to-gray-300 flex items-center justify-center">
               <span className="text-gray-400">No image</span>
             </div>
           )}
-          <div className="absolute top-0 right-0 bg-[#A86212] text-white text-xs font-semibold px-2 py-1 m-2 rounded">
-            {category}
-          </div>
+          {category && (
+            <div className="absolute top-0 right-0 bg-[#A86212] text-white text-xs font-semibold px-2 py-1 m-2 rounded-md">
+              {category}
+            </div>
+          )}
         </div>
         
-        <div className="p-4">
+        <div className="p-5 flex-1 flex flex-col">
           <h3 
-            className="text-lg font-bold mb-2 text-gray-800"
+            className="text-lg font-bold mb-3 text-gray-800 line-clamp-2 hover:text-[#A86212] transition-colors"
             dangerouslySetInnerHTML={{ __html: post.title.rendered }}
           />
           
           <div 
-            className="text-sm text-gray-600 mb-3 line-clamp-3"
-            dangerouslySetInnerHTML={{ __html: post.excerpt.rendered }}
+            className="text-sm text-gray-600 mb-4 line-clamp-3 flex-1"
+            dangerouslySetInnerHTML={{ 
+              __html: post.excerpt?.rendered 
+                ? post.excerpt.rendered.replace(/<[^>]*>/g, '').trim() 
+                : 'No description available'
+            }}
           />
           
-          <div className="text-xs text-gray-500">{date}</div>
+          <div className="flex justify-between items-center mt-auto pt-3 border-t border-gray-100">
+            <span className="text-[#A86212] text-sm font-medium flex items-center">
+              Read more
+              <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </span>
+            <div className="text-xs text-gray-500">{date}</div>
+          </div>
         </div>
       </Link>
     </div>

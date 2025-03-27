@@ -11,7 +11,7 @@ const AboutSection = () => {
               <div 
                 className="absolute inset-0 bg-cover bg-center transform transition-transform duration-700 hover:scale-105" 
                 style={{ 
-                  backgroundImage: 'url(/images/community-research.jpg)', 
+                  backgroundImage: 'url(/images/community-research.jpeg)', 
                   backgroundPosition: 'center',
                   backgroundSize: 'cover'
                 }}
