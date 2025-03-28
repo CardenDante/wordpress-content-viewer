@@ -32,7 +32,7 @@ export default async function OurApproach() {
     return <PageFallback title="Our Approach" routeSlug="our-approach" breadcrumb={breadcrumb} />;
   }
   
-  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpg';
+  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpeg';
   const pageTitle = page.title.rendered.replace(/<[^>]*>/g, '');
 
   return (

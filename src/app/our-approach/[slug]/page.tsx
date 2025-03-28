@@ -56,7 +56,7 @@ export default async function ApproachChildPage({ params }: { params: { slug: st
     return <PageFallback title={pageTitle} routeSlug={slug} breadcrumb={breadcrumb} />;
   }
   
-  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpg';
+  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpeg';
 
   return (
     <>

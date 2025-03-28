@@ -11,7 +11,7 @@ interface PageLayoutProps {
 const PageLayout = ({ 
   title, 
   children, 
-  backgroundImage = '/images/default-bg.jpg', 
+  backgroundImage = '/images/default-bg.jpeg', 
   breadcrumb 
 }: PageLayoutProps) => {
   const [loading, setLoading] = useState(true);
