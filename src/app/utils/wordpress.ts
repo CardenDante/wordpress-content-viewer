@@ -1,6 +1,16 @@
 // Replace with your actual WordPress site URL
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://cms.crdd-kenya.org/wp-json/wp/v2';
 
+const slugMapping: Record<string, string[]> = {
+  'about-us': ['about-us', 'about', 'about us', 'aboutus'],
+  'contact': ['contact', 'contact-us', 'contactus', 'contact us'],
+  'our-approach': ['our-approach', 'approach', 'our approach', 'ourapproach'],
+  'enabling-policy': ['enabling-policy', 'enabling policy', 'enablingpolicy', 'enabling-policy-upt', 'enabling policy upt'],
+  'knowledge-and-information-management': ['knowledge-and-information-management', 'knowledge and information management', 'information-management', 'knowledge-management'],
+  'sustainable-livelihoods': ['sustainable-livelihoods', 'sustainable livelihoods', 'livelihoods', 'sustainablelivelihoods'],
+  'capacity-development': ['capacity-development', 'capacity development', 'capacity', 'capacitydevelopment']
+};
+
 // Types
 export interface WordPressPost {
   id: number;
@@ -28,7 +38,23 @@ export interface WordPressPost {
     }>>;
   };
 }
-
+export interface WordPressPage {
+  id: number;
+  date: string;
+  title: {
+    rendered: string;
+  };
+  content: {
+    rendered: string;
+  };
+  slug: string;
+  featured_media: number;
+  _embedded?: {
+    'wp:featuredmedia'?: Array<{
+      source_url: string;
+    }>;
+  };
+}
 export interface WordPressCategory {
   id: number;
   name: string;
@@ -81,6 +107,68 @@ async function debugFetch(url: string, options = {}) {
     console.error('Error fetching from WordPress:', error);
     throw error;
   }
+}
+export async function getPageByRouteSlug(routeSlug: string) {
+  try {
+    // Get all possible WordPress slugs for this route slug
+    const possibleSlugs = slugMapping[routeSlug] || [routeSlug];
+    
+    // Try each slug in order until we find a page
+    for (const slug of possibleSlugs) {
+      console.log(`Trying to fetch page with slug: ${slug}`);
+      const apiUrl = `${WORDPRESS_API_URL}/pages?slug=${slug}&_embed=wp:featuredmedia`;
+      
+      const response = await fetch(apiUrl, {
+        cache: 'no-store'
+      });
+      
+      if (!response.ok) {
+        console.error(`WordPress API error for slug ${slug}: ${response.status} ${response.statusText}`);
+        continue;
+      }
+      
+      const data = await response.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        console.log(`Found page with slug: ${slug}`);
+        return data[0] as WordPressPage;
+      }
+    }
+    
+    // If we get here, we couldn't find the page with any of the possible slugs
+    console.error(`Could not find page for route slug: ${routeSlug}`);
+    return null;
+  } catch (error) {
+    console.error(`Error fetching page by route slug ${routeSlug}:`, error);
+    return null;
+  }
+}
+
+// Fetch a single page by slug
+export async function getPageBySlug(slug: string) {
+  try {
+    const apiUrl = `${WORDPRESS_API_URL}/pages?slug=${slug}&_embed=wp:featuredmedia`;
+    
+    const { data } = await debugFetch(apiUrl, {
+      cache: 'no-store'
+    });
+    
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0] as WordPressPage;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching page by slug ${slug}:`, error);
+    return null;
+  }
+}
+
+// Get featured image URL from page
+export function getFeaturedImageFromPage(page: WordPressPage): string | null {
+  if (page._embedded && page._embedded['wp:featuredmedia'] && page._embedded['wp:featuredmedia'][0]) {
+    return page._embedded['wp:featuredmedia'][0].source_url;
+  }
+  return null;
 }
 
 // Fetch posts with category and featured image data

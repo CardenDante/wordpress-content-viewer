@@ -3,9 +3,32 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+// Define navigation structure with parent-child relationships
+const navItems = [
+  { href: '/', label: 'Home', children: [] },
+  { href: '/about-us', label: 'About Us', children: [
+    { href: '/about-us', label: 'Who we are', children: [] },
+    { href: '/our-team', label: 'Meet the Team', children: [] },
+  ] },
+  { 
+    href: '/our-approach', 
+    label: 'Our Approach', 
+    children: [
+      { href: '/our-approach/enabling-policy', label: 'Enabling Policy' },
+      { href: '/our-approach/knowledge-and-information-management', label: 'Knowledge and Information Management' },
+      { href: '/our-approach/sustainable-livelihoods', label: 'Sustainable Livelihoods' },
+      { href: '/our-approach/knowledge-management', label: 'Knowledge Management' },
+      { href: '/our-approach/capacity-development', label: 'Capacity Development' },
+      { href: '/our-approach/enabling-policy-upt', label: 'Enabling Policy UPT' }
+    ]
+  },
+  { href: '/contact', label: 'Contact', children: [] }
+];
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Handle scroll for shadow effect
@@ -22,12 +45,17 @@ const Navbar = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setActiveDropdown(null);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const toggleDropdown = (label: string) => {
+    setActiveDropdown(activeDropdown === label ? null : label);
+  };
 
   return (
     <header 
@@ -54,24 +82,52 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1 lg:space-x-8">
-            {[
-              { href: '/', label: 'Home' },
-              { href: '/about-us', label: 'About Us' },
-              { href: '/projects', label: 'Projects' },
-              { href: '/our-team', label: 'Our Team' },
-              { href: '/blog', label: 'Blog' }
-            ].map((link) => (
-              <Link 
-                key={link.href} 
-                href={link.href}
-                className="px-3 py-2 text-gray-700 hover:text-[#A86212] text-sm font-medium transition-colors duration-200"
-              >
-                {link.label}
-              </Link>
+          <div className="hidden md:flex items-center space-x-1 lg:space-x-6">
+            {navItems.map((item) => (
+              <div key={item.label} className="relative group">
+                {item.children.length > 0 ? (
+                  <>
+                    <button
+                      onClick={() => toggleDropdown(item.label)}
+                      className="flex items-center px-3 py-2 text-gray-700 hover:text-[#A86212] text-sm font-medium transition-colors duration-200 group-hover:text-[#A86212]"
+                    >
+                      {item.label}
+                      <svg 
+                        className="w-4 h-4 ml-1 transform group-hover:rotate-180 transition-transform" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24" 
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div className="absolute left-0 mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-left">
+                      <div className="py-2 bg-white rounded-md shadow-xl border border-gray-100">
+                        {item.children.map((child) => (
+                          <Link 
+                            key={child.href} 
+                            href={child.href}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#A86212]"
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <Link 
+                    href={item.href}
+                    className="px-3 py-2 text-gray-700 hover:text-[#A86212] text-sm font-medium transition-colors duration-200"
+                  >
+                    {item.label}
+                  </Link>
+                )}
+              </div>
             ))}
             <Link 
-              href="/contact-us" 
+              href="/contact" 
               className="ml-2 px-5 py-2.5 bg-[#A86212] text-white hover:bg-[#8A5210] rounded-md text-sm font-medium transition-colors duration-200 shadow-sm"
             >
               Contact Us
@@ -100,29 +156,58 @@ const Navbar = () => {
       {/* Mobile Navigation Dropdown */}
       <div 
         className={`md:hidden transition-all duration-300 overflow-hidden shadow-lg ${
-          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="container mx-auto px-4 py-3 bg-white border-t border-gray-100">
           <div className="flex flex-col space-y-2">
-            {[
-              { href: '/', label: 'Home' },
-              { href: '/about-us', label: 'About Us' },
-              { href: '/projects', label: 'Projects' },
-              { href: '/our-team', label: 'Our Team' },
-              { href: '/blog', label: 'Blog' }
-            ].map((link) => (
-              <Link 
-                key={link.href} 
-                href={link.href}
-                className="py-2 px-3 text-gray-700 hover:text-[#A86212] hover:bg-gray-50 rounded-md font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                {link.label}
-              </Link>
+            {navItems.map((item) => (
+              <div key={item.label} className="py-2">
+                {item.children.length > 0 ? (
+                  <>
+                    <button
+                      onClick={() => toggleDropdown(item.label)}
+                      className="flex items-center justify-between w-full px-3 py-2 text-gray-700 hover:text-[#A86212] hover:bg-gray-50 rounded-md font-medium"
+                    >
+                      {item.label}
+                      <svg 
+                        className={`w-4 h-4 ml-1 transition-transform ${activeDropdown === item.label ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24" 
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div 
+                      className={`pl-4 mt-2 space-y-2 ${activeDropdown === item.label ? 'block' : 'hidden'}`}
+                    >
+                      {item.children.map((child) => (
+                        <Link 
+                          key={child.href} 
+                          href={child.href}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#A86212] rounded-md"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <Link 
+                    href={item.href}
+                    className="block px-3 py-2 text-gray-700 hover:text-[#A86212] hover:bg-gray-50 rounded-md font-medium"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                )}
+              </div>
             ))}
             <Link 
-              href="/contact-us" 
+              href="/contact" 
               className="py-2.5 px-3 mt-2 bg-[#A86212] text-white rounded-md text-center font-medium hover:bg-[#8A5210]"
               onClick={() => setIsOpen(false)}
             >
