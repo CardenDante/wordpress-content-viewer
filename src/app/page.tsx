@@ -1,89 +1,76 @@
-// app/our-approach/page.tsx (example)
-import { getPageByRouteSlug, getFeaturedImageFromPage } from '@/app/utils/wordpress';
-import PageLayout from '@/app/components/ui/PageLayout';
-import PageContentWrapper from '@/app/components/PageContentWrapper';
-import PageFallback from '@/app/components/ui/PageFallback';
-import Link from 'next/link';
-import LatestArticles from '@/app/components/LatestArticles';
 import { Suspense } from 'react';
+import HeroSection from './components/HeroSection';
+import AboutSection from './components/AboutSection';
+import ApproachSection from './components/ApproachSection';
+import TeamSection from './components/TeamSection';
+import ProjectsSection from './components/ProjectsSection';
+import ArticlesSection from './components/ArticlesSection';
+import ResourcesSidebar from './components/ResourcesSidebar';
+import CTASection from './components/CTASection';
+import { getArticles, getProjects, getTeamMembers } from '@/app/utils/wordpress';
+import { ArticlesGridSkeleton, SidebarSkeleton } from './components/ui/LoadingStates';
+import DebugComponent from './components/DebugComponent';
 
-// Define approach child pages
-const approachChildPages = [
-  { slug: 'enabling-policy', title: 'Enabling Policy' },
-  { slug: 'knowledge-and-information-management', title: 'Knowledge and Information Management' },
-  { slug: 'sustainable-livelihoods', title: 'Sustainable Livelihoods' },
-  { slug: 'knowledge-management', title: 'Knowledge Management' },
-  { slug: 'capacity-development', title: 'Capacity Development' },
-  { slug: 'enabling-policy-upt', title: 'Enabling Policy UPT' }
-];
-
-export default async function OurApproach() {
-  const page = await getPageByRouteSlug('our-approach');
+export default async function Home() {
+  // These functions now use slug-based fetching with proper slugs
+  const articlesPromise = getArticles(3);
+  const projectsPromise = getProjects(3);
+  const teamPromise = getTeamMembers(4, 'date', 'desc');
   
-  // Breadcrumb
-  const breadcrumb = (
-    <div className="flex items-center justify-center space-x-2">
-      <Link href="/" className="text-gray-300 hover:text-white transition-colors">Home</Link>
-      <span className="text-gray-400">/</span>
-      <span className="text-white">Our Approach</span>
-    </div>
-  );
-  
-  if (!page) {
-    return <PageFallback title="Our Approach" routeSlug="our-approach" breadcrumb={breadcrumb} />;
-  }
-  
-  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpg';
-  const pageTitle = page.title.rendered.replace(/<[^>]*>/g, '');
-
   return (
-    <>
-      <PageLayout 
-        title={pageTitle} 
-        backgroundImage={featuredImage}
-        breadcrumb={breadcrumb}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <PageContentWrapper>
-              <div dangerouslySetInnerHTML={{ __html: page.content.rendered }} />
-            </PageContentWrapper>
-          </div>
-          
-          <div className="lg:col-span-1">
-            <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-              <h3 className="text-xl font-bold text-[#A86212] mb-6">Our Focus Areas</h3>
+    <div>
+      <HeroSection />
+      
+      <div id="main-content" className="bg-gray-50 py-12 sm:py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content - Projects and Articles */}
+            <div className="lg:col-span-2 space-y-8">
+              <Suspense fallback={<div className="animate-pulse p-8 bg-white rounded-lg shadow-sm mb-8">
+                <div className="h-8 bg-gray-200 rounded mb-6 w-1/3"></div>
+                <ArticlesGridSkeleton />
+              </div>}>
+                <ProjectsSection projectsPromise={projectsPromise} />
+              </Suspense>
               
-              <div className="divide-y divide-gray-200">
-                {approachChildPages.map((childPage) => (
-                  <Link 
-                    key={childPage.slug}
-                    href={`/our-approach/${childPage.slug}`}
-                    className="block py-3 text-gray-700 hover:text-[#A86212] transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span>{childPage.title}</span>
-                      <svg className="w-5 h-5 text-[#A86212]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <Suspense fallback={<div className="animate-pulse p-8 bg-white rounded-lg shadow-sm">
+                <div className="h-8 bg-gray-200 rounded mb-6 w-1/3"></div>
+                <ArticlesGridSkeleton />
+              </div>}>
+                <ArticlesSection articlesPromise={articlesPromise} />
+              </Suspense>
+            </div>
+            
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <Suspense fallback={<SidebarSkeleton />}>
+                <ResourcesSidebar />
+              </Suspense>
             </div>
           </div>
         </div>
-      </PageLayout>
+      </div>
       
-      {/* Add Latest Articles Component */}
-      <Suspense fallback={<div className="h-96 flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-center">
-          <div className="h-8 bg-gray-200 w-64 mb-4 mx-auto rounded"></div>
-          <div className="h-4 bg-gray-200 max-w-md mx-auto rounded"></div>
+      <AboutSection />
+      <ApproachSection />
+      
+      <Suspense fallback={<div className="py-16 animate-pulse bg-white">
+        <div className="container mx-auto px-4">
+          <div className="h-10 bg-gray-200 rounded mb-10 w-1/4 mx-auto"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gray-200 rounded-lg h-64"></div>
+            ))}
+          </div>
         </div>
       </div>}>
-        <LatestArticles />
+        <TeamSection teamPromise={teamPromise} />
       </Suspense>
-    </>
+      
+      <CTASection />
+      
+      {/* Include the debug component in development */}
+      {process.env.NODE_ENV === 'development' && <DebugComponent />}
+    </div>
   );
 }

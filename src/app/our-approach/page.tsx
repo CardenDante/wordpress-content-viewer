@@ -1,11 +1,10 @@
 import { getPageByRouteSlug, getFeaturedImageFromPage } from '@/app/utils/wordpress';
 import PageLayout from '@/app/components/ui/PageLayout';
+import PageContentWrapper from '@/app/components/PageContentWrapper';
 import PageFallback from '@/app/components/ui/PageFallback';
 import Link from 'next/link';
 import LatestArticles from '@/app/components/LatestArticles';
-import ResourcesSidebar from '@/app/components/ResourcesSidebar';
 import { Suspense } from 'react';
-import { SidebarSkeleton } from '@/app/components/ui/LoadingStates';
 
 // Define approach child pages
 const approachChildPages = [
@@ -33,29 +32,25 @@ export default async function OurApproach() {
     return <PageFallback title="Our Approach" routeSlug="our-approach" breadcrumb={breadcrumb} />;
   }
   
-  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpeg';
+  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpg';
+  const pageTitle = page.title.rendered.replace(/<[^>]*>/g, '');
 
   return (
     <>
       <PageLayout 
-        title={page.title.rendered.replace(/<[^>]*>/g, '')} 
+        title={pageTitle} 
         backgroundImage={featuredImage}
         breadcrumb={breadcrumb}
       >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <div
-              className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: page.content.rendered }}
-            />
+            <PageContentWrapper>
+              <div dangerouslySetInnerHTML={{ __html: page.content.rendered }} />
+            </PageContentWrapper>
           </div>
           
           <div className="lg:col-span-1">
-            <Suspense fallback={<SidebarSkeleton />}>
-              <ResourcesSidebar />
-            </Suspense>
-            
-            <div className="bg-gray-50 p-6 rounded-lg shadow-sm mt-8">
+            <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold text-[#A86212] mb-6">Our Focus Areas</h3>
               
               <div className="divide-y divide-gray-200">
