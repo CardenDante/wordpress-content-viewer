@@ -1,6 +1,9 @@
 // Replace with your actual WordPress site URL
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://cms.crdd-kenya.org/wp-json/wp/v2';
 
+// Cache revalidation time in seconds (10 minutes)
+const REVALIDATE_TIME = 600;
+
 const slugMapping: Record<string, string[]> = {
   'about-us': ['about-us', 'about', 'about us', 'aboutus'],
   'contact': ['contact', 'contact-us', 'contactus', 'contact us'],
@@ -38,6 +41,7 @@ export interface WordPressPost {
     }>>;
   };
 }
+
 export interface WordPressPage {
   id: number;
   date: string;
@@ -55,6 +59,7 @@ export interface WordPressPage {
     }>;
   };
 }
+
 export interface WordPressCategory {
   id: number;
   name: string;
@@ -95,19 +100,29 @@ export function cleanHtml(html: string): string {
 async function debugFetch(url: string, options = {}) {
   console.log('Fetching from:', url);
   try {
-    const response = await fetch(url, options);
+    // Merge options with default options
+    const mergedOptions = {
+      next: { revalidate: REVALIDATE_TIME },
+      ...options
+    };
+    
+    const response = await fetch(url, mergedOptions);
+    
     if (!response.ok) {
       throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
     }
+    
     const data = await response.json();
     console.log(`API response from ${url}:`, 
       Array.isArray(data) ? `Retrieved ${data.length} items` : 'Retrieved data');
+    
     return { response, data };
   } catch (error) {
     console.error('Error fetching from WordPress:', error);
     throw error;
   }
 }
+
 export async function getPageByRouteSlug(routeSlug: string) {
   try {
     // Get all possible WordPress slugs for this route slug
@@ -118,20 +133,25 @@ export async function getPageByRouteSlug(routeSlug: string) {
       console.log(`Trying to fetch page with slug: ${slug}`);
       const apiUrl = `${WORDPRESS_API_URL}/pages?slug=${slug}&_embed=wp:featuredmedia`;
       
-      const response = await fetch(apiUrl, {
-        cache: 'no-store'
-      });
-      
-      if (!response.ok) {
-        console.error(`WordPress API error for slug ${slug}: ${response.status} ${response.statusText}`);
+      try {
+        const response = await fetch(apiUrl, { 
+          next: { revalidate: REVALIDATE_TIME } 
+        });
+        
+        if (!response.ok) {
+          console.error(`WordPress API error for slug ${slug}: ${response.status} ${response.statusText}`);
+          continue;
+        }
+        
+        const data = await response.json();
+        
+        if (Array.isArray(data) && data.length > 0) {
+          console.log(`Found page with slug: ${slug}`);
+          return data[0] as WordPressPage;
+        }
+      } catch (err) {
+        console.error(`Error trying slug ${slug}:`, err);
         continue;
-      }
-      
-      const data = await response.json();
-      
-      if (Array.isArray(data) && data.length > 0) {
-        console.log(`Found page with slug: ${slug}`);
-        return data[0] as WordPressPage;
       }
     }
     
@@ -149,9 +169,15 @@ export async function getPageBySlug(slug: string) {
   try {
     const apiUrl = `${WORDPRESS_API_URL}/pages?slug=${slug}&_embed=wp:featuredmedia`;
     
-    const { data } = await debugFetch(apiUrl, {
-      cache: 'no-store'
+    const response = await fetch(apiUrl, { 
+      next: { revalidate: REVALIDATE_TIME } 
     });
+    
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
     
     if (Array.isArray(data) && data.length > 0) {
       return data[0] as WordPressPage;
@@ -165,7 +191,7 @@ export async function getPageBySlug(slug: string) {
 
 // Get featured image URL from page
 export function getFeaturedImageFromPage(page: WordPressPage): string | null {
-  if (page._embedded && page._embedded['wp:featuredmedia'] && page._embedded['wp:featuredmedia'][0]) {
+  if (page?._embedded?.['wp:featuredmedia']?.[0]) {
     return page._embedded['wp:featuredmedia'][0].source_url;
   }
   return null;
@@ -177,10 +203,15 @@ export async function getPosts(params: Record<string, string> = {}) {
     const queryParams = buildQueryParams(params);
     const apiUrl = `${WORDPRESS_API_URL}/posts?${queryParams}`;
     
-    const { response, data } = await debugFetch(apiUrl, {
-      cache: 'no-store' // Disable caching to ensure fresh data
+    const response = await fetch(apiUrl, { 
+      next: { revalidate: REVALIDATE_TIME } 
     });
     
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
     const posts = Array.isArray(data) ? data : [];
     const totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1');
     
@@ -200,9 +231,15 @@ export async function getCategories() {
   try {
     const apiUrl = `${WORDPRESS_API_URL}/categories?per_page=100`;
     
-    const { data } = await debugFetch(apiUrl, {
-      cache: 'no-store'
+    const response = await fetch(apiUrl, { 
+      next: { revalidate: REVALIDATE_TIME } 
     });
+    
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
     
     return Array.isArray(data) ? data as WordPressCategory[] : [];
   } catch (error) {
@@ -228,9 +265,15 @@ export async function getCategoryBySlug(slug: string): Promise<WordPressCategory
   try {
     const apiUrl = `${WORDPRESS_API_URL}/categories?slug=${slug}`;
     
-    const { data } = await debugFetch(apiUrl, {
-      cache: 'no-store'
+    const response = await fetch(apiUrl, { 
+      next: { revalidate: REVALIDATE_TIME } 
     });
+    
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
     
     if (Array.isArray(data) && data.length > 0) {
       return data[0] as WordPressCategory;
@@ -283,9 +326,15 @@ export async function getPostBySlug(slug: string) {
   try {
     const apiUrl = `${WORDPRESS_API_URL}/posts?slug=${slug}&_embed=wp:featuredmedia,wp:term`;
     
-    const { data } = await debugFetch(apiUrl, {
-      cache: 'no-store'
+    const response = await fetch(apiUrl, { 
+      next: { revalidate: REVALIDATE_TIME } 
     });
+    
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
     
     if (Array.isArray(data) && data.length > 0) {
       return data[0] as WordPressPost;

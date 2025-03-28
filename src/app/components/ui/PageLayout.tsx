@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 
 interface PageLayoutProps {
   title: string;
@@ -9,27 +8,58 @@ interface PageLayoutProps {
   breadcrumb?: React.ReactNode;
 }
 
-const PageLayout = ({ title, children, backgroundImage = '/images/default-bg.jpeg', breadcrumb }: PageLayoutProps) => {
+const PageLayout = ({ 
+  title, 
+  children, 
+  backgroundImage = '/images/default-bg.jpg', 
+  breadcrumb 
+}: PageLayoutProps) => {
   const [loading, setLoading] = useState(true);
   const [contentVisible, setContentVisible] = useState(false);
+  const [bgImage, setBgImage] = useState<string | null>(null);
+
+  // Fallback background color
+  const fallbackBg = '#A86212';
 
   useEffect(() => {
-    // Simulate page load
-    const loadTimer = setTimeout(() => {
-      setLoading(false);
-    }, 800);
-    
-    // Add a slight delay after loading is complete before showing content
-    // This creates a smoother animation effect
-    const visibilityTimer = setTimeout(() => {
-      setContentVisible(true);
-    }, 850);
+    // Check if we're running in the browser
+    if (typeof window !== 'undefined') {
+      // Check if the background image exists
+      if (backgroundImage) {
+        const img = new Image();
+        img.src = backgroundImage;
+        
+        img.onload = () => {
+          setBgImage(backgroundImage);
+        };
+        
+        img.onerror = () => {
+          // If image doesn't exist, use a fallback color
+          setBgImage(null);
+        };
+      }
+      
+      // Simulate page load
+      const loadTimer = setTimeout(() => {
+        setLoading(false);
+      }, 800);
+      
+      // Add a slight delay after loading is complete before showing content
+      const visibilityTimer = setTimeout(() => {
+        setContentVisible(true);
+      }, 850);
 
-    return () => {
-      clearTimeout(loadTimer);
-      clearTimeout(visibilityTimer);
-    };
-  }, []);
+      return () => {
+        clearTimeout(loadTimer);
+        clearTimeout(visibilityTimer);
+      };
+    } else {
+      // If we're server-side, don't show loading state
+      setLoading(false);
+      setContentVisible(true);
+      setBgImage(backgroundImage);
+    }
+  }, [backgroundImage]);
 
   if (loading) {
     return (
@@ -45,14 +75,17 @@ const PageLayout = ({ title, children, backgroundImage = '/images/default-bg.jpe
     );
   }
 
+  // Determine background style
+  const backgroundStyle = bgImage
+    ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(${bgImage})`
+    : `linear-gradient(to right, ${fallbackBg}, #935410)`;
+
   return (
     <div className={`transition-opacity duration-500 ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* Page Header */}
       <div 
         className="relative bg-cover bg-center py-20 md:py-32"
-        style={{ 
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(${backgroundImage})` 
-        }}
+        style={{ backgroundImage: backgroundStyle }}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">

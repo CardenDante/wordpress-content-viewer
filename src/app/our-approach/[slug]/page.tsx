@@ -1,6 +1,7 @@
 import { getPageBySlug, getFeaturedImageFromPage } from '@/app/utils/wordpress';
 import PageLayout from '@/app/components/ui/PageLayout';
 import PageFallback from '@/app/components/ui/PageFallback';
+import PageContentWrapper from '@/app/components/PageContentWrapper';
 import Link from 'next/link';
 import LatestArticles from '@/app/components/LatestArticles';
 import { Suspense } from 'react';
@@ -16,13 +17,7 @@ const approachChildPages = [
 ];
 
 // Using generateMetadata to handle dynamic params
-interface MetadataParams {
-  params: {
-    slug: string;
-  };
-}
-
-export async function generateMetadata({ params }: MetadataParams) {
+export async function generateMetadata({ params }: { params: { slug: string } }) {
   // Find the title from our defined pages if possible
   const childPageInfo = approachChildPages.find(p => p.slug === params.slug);
   const pageTitle = childPageInfo?.title || params.slug;
@@ -32,9 +27,9 @@ export async function generateMetadata({ params }: MetadataParams) {
   };
 }
 
-export default async function ApproachChildPage(props: { params: { slug: any; }; }) {
-  // Use props directly without destructuring
-  const slug = props.params?.slug;
+export default async function ApproachChildPage({ params }: { params: { slug: string } }) {
+  // Get slug directly from params without destructuring
+  const slug = params.slug;
   
   // Ensure we have a slug before proceeding
   if (!slug) {
@@ -61,7 +56,7 @@ export default async function ApproachChildPage(props: { params: { slug: any; };
     return <PageFallback title={pageTitle} routeSlug={slug} breadcrumb={breadcrumb} />;
   }
   
-  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpeg';
+  const featuredImage = getFeaturedImageFromPage(page) || '/images/default-bg.jpg';
 
   return (
     <>
@@ -72,10 +67,9 @@ export default async function ApproachChildPage(props: { params: { slug: any; };
       >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <div
-              className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: page.content.rendered }}
-            />
+            <PageContentWrapper>
+              <div dangerouslySetInnerHTML={{ __html: page.content.rendered }} />
+            </PageContentWrapper>
           </div>
           
           <div className="lg:col-span-1">
